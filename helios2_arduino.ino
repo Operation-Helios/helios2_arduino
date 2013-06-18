@@ -41,7 +41,8 @@ unsigned int parachutePatternPosition = 0;
 // FUNCTION PROTOTYPES
 void setPinModes();
 void error();  // flash status LED for error
-void gpsGetData();
+void gpsGetData(void (*callback)(bool*), bool* returnValue);
+void checkFix(bool* returnValue);  // tells if the GPS has a fix
 
 File file;
 TinyGPS gps;
@@ -63,6 +64,11 @@ void setup()
   // init SD card
   if (!SD.begin(SD_SELECT))
     error();
+  
+  // wait for good GPS data
+  bool gotFix = false;
+  while (!gotFix)
+    gpsGetData(&checkFix, &gotFix);
   
   // setup well well, turn light off
   digitalWrite(STATUS, LOW);
@@ -97,13 +103,22 @@ void error()
   }
 }
 
-// read GPS data and feed it to TinyGPS
-void gpsGetData()
+// read GPS data and feed it to TinyGPS and call a callback if a valid sentence is received
+void gpsGetData(void (*callback)(bool*), bool* returnValue)
 {
   while (gpsSerial.available())
   {
     int data = gpsSerial.read();
-    gps.encode(data);
+    if (gps.encode(data))
+      callback(returnValue);
   }
+}
+
+// detect if the GPS has a fix
+void checkFix(bool* returnValue)
+{
+  unsigned long date, time, fixAge;
+  gps.get_datetime(&date, &time, &fixAge);
+  *returnValue = (fixAge != 0);
 }
 
