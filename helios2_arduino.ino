@@ -4,7 +4,6 @@
 
 #include <SoftwareSerial.h>
 #include <SD.h>
-#include "Time.h"
 #include "TinyGPS.h"
 
 // PINS
@@ -42,9 +41,7 @@ unsigned int parachutePatternPosition = 0;
 // FUNCTION PROTOTYPES
 void setPinModes();
 void error();  // flash status LED for error
-bool validDate();  // gps has valid date data
 void gpsGetData();
-void setTime();
 
 File file;
 TinyGPS gps;
@@ -67,27 +64,11 @@ void setup()
   if (!SD.begin(SD_SELECT))
     error();
   
-  // wait for date/time data to calibrate clock
-  while (!validDate())
-    gpsGetData();
-  
-  // set the date/time
-  setTime();
-  
   // setup well well, turn light off
   digitalWrite(STATUS, LOW);
 }
 
-void loop()
-{
-  // print time for debugging
-  time_t time = now();
-  String timestamp = String(day(time)) + String("/") + String(month(time)) + String("/") + String(year(time));
-  timestamp += String(" ") + String(hour(time)) + String(":") + String(minute(time)) + String(":") + String(second(time));
-  timestamp += " " + String(time);
-  Serial.println(timestamp);
-  delay(1000);
-}
+void loop() {}
 
 void setPinModes()
 {
@@ -116,16 +97,6 @@ void error()
   }
 }
 
-// check if GPS has received valid date data
-bool validDate()
-{
-  unsigned long date;
-  unsigned long time;
-  unsigned long fixAge;
-  gps.get_datetime(&date, &time, &fixAge);
-  return (date != 0);
-}
-
 // read GPS data and feed it to TinyGPS
 void gpsGetData()
 {
@@ -134,20 +105,5 @@ void gpsGetData()
     int data = gpsSerial.read();
     gps.encode(data);
   }
-}
-
-// set the time from GPS data
-void setTime()
-{
-  int years;
-  byte months;
-  byte days;
-  byte hours;
-  byte minutes;
-  byte seconds;
-  byte hundredths;
-  unsigned long fixAge;
-  gps.crack_datetime(&years, &months, &days, &hours, &minutes, &seconds, &hundredths, &fixAge);
-  setTime(hours, minutes, seconds, days, months, years);
 }
 
