@@ -35,6 +35,8 @@ const unsigned int balloonPatternLength = sizeof(balloonPattern);
 const unsigned int parachutePatternLength = sizeof(parachutePattern);
 
 // GLOBAL VARIABLES
+char filename[] = "00000000.000";
+const byte filenameLength = 13;
 unsigned int balloonPatternPosition = 0;
 unsigned int parachutePatternPosition = 0;
 
@@ -43,6 +45,7 @@ void setPinModes();
 void error();  // flash status LED for error
 void gpsGetData(void (*callback)(bool*), bool* returnValue);
 void checkFix(bool* returnValue);  // tells if the GPS has a fix
+void calcFilename();
 
 File file;
 TinyGPS gps;
@@ -69,6 +72,9 @@ void setup()
   bool gotFix = false;
   while (!gotFix)
     gpsGetData(&checkFix, &gotFix);
+  
+  // store the date to use as the filename of the log
+  calcFilename();
   
   // setup well well, turn light off
   digitalWrite(STATUS, LOW);
@@ -120,5 +126,59 @@ void checkFix(bool* returnValue)
   unsigned long date, time, fixAge;
   gps.get_datetime(&date, &time, &fixAge);
   *returnValue = (fixAge != 0);
+}
+
+// store the date as the filename of the log file
+void calcFilename()
+{
+  // get the date values
+  int year;
+  byte month, day, hour, minute, second, hundredth;
+  unsigned long fixAge;
+  gps.crack_datetime(&year, &month, &day, &hour, &minute, &second, &hundredth, &fixAge);
+  
+  // convert them into Strings
+  String dayString, monthString, yearString;
+  dayString = String(day);
+  if (dayString.length() < 2)  // length is always at least 1
+    dayString = String("0") + dayString;
+  monthString = String(month);
+  if (monthString.length() < 2)
+    monthString = String("0") + monthString;
+  yearString = String(year);  // already four digits
+  
+  String baseName = yearString + monthString + dayString;  // ISO 8601
+  baseName += String(".");
+  
+  // find the next available name
+  // sketch will not work if it has been used more than 999 times in the same day
+  unsigned int counter = 0;
+  while (true)
+  {
+    // convert counter value into a three digit string
+    String counterString = String(counter);
+    switch (counterString.length())
+    {
+      case 0:
+        counterString = "000";
+        break;
+      case 1:
+        counterString = "00" + counterString;
+        break;
+      case 2:
+        counterString = "0" + counterString;
+        break;
+      default:
+        break;
+    }
+    
+    // test if such a file exists
+    String tempFilename = baseName + counterString;
+    tempFilename.toCharArray(filename, filenameLength);
+    if (SD.exists(filename))
+      break;
+    else
+      counter++;
+  }
 }
 
