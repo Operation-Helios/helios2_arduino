@@ -2,6 +2,17 @@
 // Helios 2 Arduino Sketch
 // Operation Helios (operationhelios.com)
 
+// LOG FILE FORMAT -
+// date,time,latitude,longitude,altitude,speed,course,satellites,fixage,
+// (cont.) characters,sentences,failedchecksums,batteryvoltage,tempin,tempout,
+// date is in ddmmyy
+// time is in hhmmsscc
+// altitude is in metres
+// speed is in 100ths of a knot
+// course is in 100ths of a degree
+// fixage is in milliseconds
+// batteryvoltage, tempin and tempout are raw values from analogRead()
+
 #include <SoftwareSerial.h>
 #include <SD.h>
 #include "TinyGPS.h"
@@ -45,9 +56,9 @@ void setPinModes();
 void error();  // flash status LED for error
 void gpsGetData(void (*callback)(bool*), bool* returnValue);
 void checkFix(bool* returnValue);  // tells if the GPS has a fix
+void logData(bool* returnValue);
 void calcFilename();
 
-File file;
 TinyGPS gps;
 SoftwareSerial gpsSerial = SoftwareSerial(GPS_RX, GPS_TX);
 
@@ -80,7 +91,12 @@ void setup()
   digitalWrite(STATUS, LOW);
 }
 
-void loop() {}
+void loop()
+{
+  // get data from the GPS, logging data when new GPS data available
+  bool returnValue;  // unused
+  gpsGetData(&logData, &returnValue);
+}
 
 void setPinModes()
 {
@@ -125,7 +141,54 @@ void checkFix(bool* returnValue)
 {
   unsigned long date, time, fixAge;
   gps.get_datetime(&date, &time, &fixAge);
-  *returnValue = (fixAge != 0);
+  *returnValue = (fixAge != TinyGPS::GPS_INVALID_AGE);
+}
+
+// log all available data
+void logData(bool* returnValue)
+{
+  // acquire GPS data
+  unsigned long date, time, speed, course, chars, fixAge;
+  long latitude, longitude;
+  float altitude;
+  unsigned short satellites, sentences, failed;
+  
+  gps.get_datetime(&date, &time, &fixAge);
+  gps.get_position(&latitude, &longitude, &fixAge);
+  gps.stats(&chars, &sentences, &failed);
+  speed = gps.speed();
+  course = gps.course();
+  altitude = gps.f_altitude();
+  satellites = gps.satellites();
+  
+  // acquire sensor data
+  int batteryVoltage = analogRead(BATTERY_VOLTAGE);
+  int tempIn = analogRead(TEMP_IN);
+  int tempOut = analogRead(TEMP_OUT);
+  
+  // open log file
+  File file = SD.open(filename, FILE_WRITE);
+  
+  // write data to the log file
+  file.print(date); file.print(",");
+  file.print(time); file.print(",");
+  file.print(latitude); file.print(",");
+  file.print(longitude); file.print(",");
+  file.print(altitude); file.print(",");
+  file.print(speed); file.print(",");
+  file.print(course); file.print(",");
+  file.print(satellites); file.print(",");
+  file.print(fixAge); file.print(",");
+  file.print(chars); file.print(",");
+  file.print(sentences); file.print(",");
+  file.print(failed); file.print(",");
+  file.print(batteryVoltage); file.print(",");
+  file.print(tempIn); file.print(",");
+  file.print(tempOut); file.print(",");
+  file.println("");
+  
+  // close log file
+  file.close();
 }
 
 // store the date as the filename of the log file
