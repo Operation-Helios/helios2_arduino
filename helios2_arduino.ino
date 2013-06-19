@@ -87,7 +87,7 @@ void setup()
   // store the date to use as the filename of the log
   calcFilename();
   
-  // setup well well, turn light off
+  // setup went well, turn light off
   digitalWrite(STATUS, LOW);
 }
 
