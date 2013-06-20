@@ -50,6 +50,8 @@ char filename[] = "00000000.000";
 const byte filenameLength = 13;
 unsigned int balloonPatternPosition = 0;
 unsigned int parachutePatternPosition = 0;
+unsigned long balloonTimeout = 0;  // stop cutting balloon when this time has been reached
+unsigned long parachuteTimeout = 0;
 
 // FUNCTION PROTOTYPES
 void setPinModes();
@@ -61,6 +63,18 @@ void calcFilename();
 bool gotSignal();  // DTMF tone coming in?
 byte getPinValue(unsigned int pin);  // digitalRead() a pin, returning 1 or 0
 byte readDTMF();  // return the value of the received tone
+void matchTone(
+  byte toneValue,
+  const byte* pattern,
+  unsigned int* patternPosition,
+  unsigned int patternLength,
+  int CUT_PIN,
+  unsigned long* timeout,
+  unsigned int CUT_TIME);  // match tone with pattern, cutting if appropriate
+void checkTimeout(
+  unsigned long time,
+  unsigned long* timeout,
+  int CUT_PIN);  // stop cutdown if timeout reached
 
 TinyGPS gps;
 SoftwareSerial gpsSerial = SoftwareSerial(GPS_RX, GPS_TX);
@@ -99,6 +113,35 @@ void loop()
   // get data from the GPS, logging data when new GPS data available
   bool returnValue;  // unused
   gpsGetData(&logData, &returnValue);
+  
+  // check if a DTMF tone is being received, then process it
+  if (gotSignal())
+  {
+    byte toneValue = readDTMF();
+    
+    matchTone(
+      toneValue,
+      balloonPattern,
+      &balloonPatternPosition,
+      balloonPatternLength,
+      CUT_BALLOON,
+      &balloonTimeout,
+      CUT_BALLOON_TIME);  // check balloon cutdown
+    
+    matchTone(
+      toneValue,
+      parachutePattern,
+      &parachutePatternPosition,
+      parachutePatternLength,
+      CUT_PARACHUTE,
+      &parachuteTimeout,
+      CUT_PARACHUTE_TIME);  // check parachute cutdown
+  }
+  
+  // check if it is time to stop cutting either the balloon or the parachute
+  unsigned long time = millis();
+  checkTimeout(time, &balloonTimeout, CUT_BALLOON);
+  checkTimeout(time, &parachuteTimeout, CUT_PARACHUTE);
 }
 
 void setPinModes()
@@ -265,5 +308,43 @@ byte readDTMF()
   byte pin2 = getPinValue(DTMF2) * B0100;
   byte pin3 = getPinValue(DTMF3) * B1000;
   return pin0 + pin1 + pin2 + pin3;
+}
+
+// match a DTMF tone to the given pattern and cut a line if appropriate
+void matchTone(
+  byte toneValue,
+  const byte* pattern,
+  unsigned int* patternPosition,
+  unsigned int patternLength,
+  int CUT_PIN,
+  unsigned long* timeout,
+  unsigned int CUT_TIME)
+{
+  // try to match the received tone with the patterns
+  if (toneValue == pattern[*patternPosition])
+  {
+    (*patternPosition)++;
+    if (*patternPosition == patternLength - 1)  // if pattern totally matched
+    {
+      digitalWrite(CUT_PIN, HIGH);  // cut the thing
+      *patternPosition = 0;  // reset pattern matching
+      *timeout = millis() + CUT_TIME;  // set timeout
+    }
+  }
+  else
+    *patternPosition = 0;  // reset pattern matching if matching failed
+}
+
+// stop cutdown if timeout has been reached
+void checkTimeout(
+  unsigned long time,
+  unsigned long* timeout,
+  int CUT_PIN)
+{
+  if (*timeout != 0 && time >= *timeout)
+  {
+    digitalWrite(CUT_PIN, LOW);  // stop cutdown
+    *timeout = 0;  // reset timeout
+  }
 }
 
