@@ -22,7 +22,7 @@ const unsigned int STATUS = A0;  // status LED: off when all good, flashing when
 const unsigned int SD_SELECT = 8;
 const unsigned int GPS_RX = 3;
 const unsigned int GPS_TX = A5;  // unused
-const unsigned int DTMF_SIGNAL = 9;
+const unsigned int DTMF_SIGNAL = 9;  // pin is high when receiving DTMF signal
 const unsigned int DTMF0 = 2;  // LSB
 const unsigned int DTMF1 = 4;
 const unsigned int DTMF2 = 5;
@@ -58,6 +58,9 @@ void gpsGetData(void (*callback)(bool*), bool* returnValue);
 void checkFix(bool* returnValue);  // tells if the GPS has a fix
 void logData(bool* returnValue);
 void calcFilename();
+bool gotSignal();  // DTMF tone coming in?
+byte getPinValue(unsigned int pin);  // digitalRead() a pin, returning 1 or 0
+byte readDTMF();  // return the value of the received tone
 
 TinyGPS gps;
 SoftwareSerial gpsSerial = SoftwareSerial(GPS_RX, GPS_TX);
@@ -243,5 +246,24 @@ void calcFilename()
     else
       counter++;
   }
+}
+
+bool gotSignal()
+{
+  return (digitalRead(DTMF_SIGNAL) == HIGH);
+}
+
+byte getPinValue(unsigned int pin)
+{
+  return ((digitalRead(pin) == HIGH)? 1 : 0);
+}
+
+byte readDTMF()
+{
+  byte pin0 = getPinValue(DTMF0) * B0001;
+  byte pin1 = getPinValue(DTMF1) * B0010;
+  byte pin2 = getPinValue(DTMF2) * B0100;
+  byte pin3 = getPinValue(DTMF3) * B1000;
+  return pin0 + pin1 + pin2 + pin3;
 }
 
