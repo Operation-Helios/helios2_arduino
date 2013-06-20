@@ -70,11 +70,13 @@ void matchTone(
   unsigned int patternLength,
   int CUT_PIN,
   unsigned long* timeout,
-  unsigned int CUT_TIME);  // match tone with pattern, cutting if appropriate
+  unsigned int CUT_TIME,
+  const char* cutString);  // match tone with pattern, cutting if appropriate
 void checkTimeout(
   unsigned long time,
   unsigned long* timeout,
-  int CUT_PIN);  // stop cutdown if timeout reached
+  int CUT_PIN,
+  const char* cutString);  // stop cutdown if timeout reached
 
 TinyGPS gps;
 SoftwareSerial gpsSerial = SoftwareSerial(GPS_RX, GPS_TX);
@@ -126,7 +128,8 @@ void loop()
       balloonPatternLength,
       CUT_BALLOON,
       &balloonTimeout,
-      CUT_BALLOON_TIME);  // check balloon cutdown
+      CUT_BALLOON_TIME,
+      "BALLOON");  // check balloon cutdown
     
     matchTone(
       toneValue,
@@ -135,13 +138,14 @@ void loop()
       parachutePatternLength,
       CUT_PARACHUTE,
       &parachuteTimeout,
-      CUT_PARACHUTE_TIME);  // check parachute cutdown
+      CUT_PARACHUTE_TIME,
+      "PARACHUTE");  // check parachute cutdown
   }
   
   // check if it is time to stop cutting either the balloon or the parachute
   unsigned long time = millis();
-  checkTimeout(time, &balloonTimeout, CUT_BALLOON);
-  checkTimeout(time, &parachuteTimeout, CUT_PARACHUTE);
+  checkTimeout(time, &balloonTimeout, CUT_BALLOON, "BALLOON");
+  checkTimeout(time, &parachuteTimeout, CUT_PARACHUTE, "PARACHUTE");
 }
 
 void setPinModes()
@@ -315,7 +319,8 @@ void matchTone(
   unsigned int patternLength,
   int CUT_PIN,
   unsigned long* timeout,
-  unsigned int CUT_TIME)
+  unsigned int CUT_TIME,
+  const char* cutString)
 {
   // try to match the received tone with the patterns
   if (toneValue == pattern[*patternPosition])
@@ -326,6 +331,11 @@ void matchTone(
       digitalWrite(CUT_PIN, HIGH);  // cut the thing
       *patternPosition = 0;  // reset pattern matching
       *timeout = millis() + CUT_TIME;  // set timeout
+      
+      // log this event to the SD card
+      File file = SD.open(filename, FILE_WRITE);
+      file.print(cutString); file.print(".S"); file.print(",");
+      file.close();
     }
   }
   else
@@ -336,12 +346,18 @@ void matchTone(
 void checkTimeout(
   unsigned long time,
   unsigned long* timeout,
-  int CUT_PIN)
+  int CUT_PIN,
+  const char* cutString)
 {
   if (*timeout != 0 && time >= *timeout)
   {
     digitalWrite(CUT_PIN, LOW);  // stop cutdown
     *timeout = 0;  // reset timeout
+    
+    // log this event to the SD card
+    File file = SD.open(filename, FILE_WRITE);
+    file.print(cutString); file.print(".E"); file.print(",");
+    file.close();
   }
 }
 
