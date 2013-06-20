@@ -322,8 +322,10 @@ void matchTone(
   unsigned int CUT_TIME,
   const char* cutString)
 {
-  // try to match the received tone with the patterns
-  if (toneValue == pattern[*patternPosition])
+  // make sure the current tone isn't the same as the last
+  byte lastTone = (*patternPosition > 0)? pattern[(*patternPosition)-1] : toneValue+1;
+  if (toneValue == lastTone);
+  else if (toneValue == pattern[*patternPosition])  // try to match the received tone
   {
     (*patternPosition)++;
     if (*patternPosition == patternLength - 1)  // if pattern totally matched
