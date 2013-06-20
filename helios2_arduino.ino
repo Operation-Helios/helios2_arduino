@@ -260,9 +260,8 @@ void calcFilename()
   baseName += String(".");
   
   // find the next available name
-  // sketch will not work if it has been used more than 999 times in the same day
-  unsigned int counter = 0;
-  while (true)
+  // sketch will just use YYYYMMDD.999 if it has been used more than 999 times
+  for (unsigned int counter = 0; counter <= 999; counter++)
   {
     // convert counter value into a three digit string
     String counterString = String(counter);
@@ -284,10 +283,8 @@ void calcFilename()
     // test if such a file exists
     String tempFilename = baseName + counterString;
     tempFilename.toCharArray(filename, filenameLength);
-    if (SD.exists(filename))
+    if (!SD.exists(filename))
       break;
-    else
-      counter++;
   }
 }
 
