@@ -336,7 +336,7 @@ void matchTone(
       
       // log this event to the SD card
       File file = SD.open(filename, FILE_WRITE);
-      file.print(cutString); file.print(".S"); file.print(",");
+      file.print(cutString); file.print(".S"); file.println(",");
       file.close();
     }
   }
@@ -358,7 +358,7 @@ void checkTimeout(
     
     // log this event to the SD card
     File file = SD.open(filename, FILE_WRITE);
-    file.print(cutString); file.print(".E"); file.print(",");
+    file.print(cutString); file.print(".E"); file.println(",");
     file.close();
   }
 }
