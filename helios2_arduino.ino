@@ -328,7 +328,7 @@ void matchTone(
   else if (toneValue == pattern[*patternPosition])  // try to match the received tone
   {
     (*patternPosition)++;
-    if (*patternPosition == patternLength - 1)  // if pattern totally matched
+    if (*patternPosition == patternLength)  // if pattern totally matched
     {
       digitalWrite(CUT_PIN, HIGH);  // cut the thing
       *patternPosition = 0;  // reset pattern matching
