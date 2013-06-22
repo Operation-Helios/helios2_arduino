@@ -21,14 +21,14 @@
 const unsigned int STATUS = A0;  // status LED: off when all good, flashing when error
 const unsigned int SD_SELECT = 8;
 const unsigned int GPS_RX = 3;
-const unsigned int GPS_TX = A5;  // unused
+const unsigned int GPS_TX = 10;  // unused
 const unsigned int DTMF_SIGNAL = 9;  // pin is high when receiving DTMF signal
 const unsigned int DTMF0 = 2;  // LSB
 const unsigned int DTMF1 = 4;
 const unsigned int DTMF2 = 5;
 const unsigned int DTMF3 = 7;  // MSB
 const unsigned int CUT_BALLOON = 6;
-const unsigned int CUT_PARACHUTE = 10;
+const unsigned int CUT_PARACHUTE = A5;
 const unsigned int BATTERY_VOLTAGE = A1;
 const unsigned int TEMP_IN = A2;  // temperature inside the capsule
 const unsigned int TEMP_OUT = A3;  // temperature outside
@@ -161,6 +161,9 @@ void setPinModes()
   pinMode(BATTERY_VOLTAGE, INPUT);
   pinMode(TEMP_IN, INPUT);
   pinMode(TEMP_OUT, INPUT);
+  
+  digitalWrite(CUT_BALLOON, LOW);
+  digitalWrite(CUT_PARACHUTE, LOW);
 }
 
 // flash LED continuously to show error
