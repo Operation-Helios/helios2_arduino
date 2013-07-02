@@ -40,7 +40,7 @@ const unsigned int parachutePatternLength = sizeof(parachutePattern);
 
 // GLOBAL VARIABLES
 char filename[] = "000";
-const byte filenameLength = 3;
+const byte filenameLength = 4;
 unsigned int balloonPatternPosition = 0;
 unsigned int parachutePatternPosition = 0;
 unsigned long balloonTimeout = 0;  // stop cutting balloon when this time has been reached
@@ -48,6 +48,7 @@ unsigned long parachuteTimeout = 0;
 
 // FUNCTION PROTOTYPES
 void setPinModes();
+void calcFilename();
 void error();  // flash status LED for error
 bool gotSignal();  // DTMF tone coming in?
 byte getPinValue(unsigned int pin);  // digitalRead() a pin, returning 1 or 0
@@ -82,6 +83,8 @@ void setup()
   // init SD card
   if (!SD.begin(SD_SELECT))
     error();
+  
+  void calcFilename();
   
   // setup went well, turn light off
   digitalWrite(STATUS, LOW);
@@ -137,6 +140,30 @@ void setPinModes()
   
   digitalWrite(CUT_BALLOON, LOW);
   digitalWrite(CUT_PARACHUTE, LOW);
+}
+
+void calcFilename()
+{
+  // look for an unused filename
+  for (unsigned int counter = 0; counter <= 999; counter++)
+  {
+    // convert the counter to a three digit string
+    String name = String(counter);
+    switch (name.length())
+    {
+      case 0: name = "0" + name;
+      case 1: name = "0" + name;
+      case 2: name = "0" + name;
+      default: break;
+    }
+    
+    // set the filename to the generated one
+    name.toCharArray(filename, filenameLength);
+    
+    // check if the name has already been used
+    if (!SD.exists(filename))
+      break;  // the filename has been found!
+  }
 }
 
 // flash LED continuously to show error
