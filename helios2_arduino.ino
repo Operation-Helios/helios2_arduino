@@ -45,10 +45,12 @@ unsigned int balloonPatternPosition = 0;
 unsigned int parachutePatternPosition = 0;
 unsigned long balloonTimeout = 0;  // stop cutting balloon when this time has been reached
 unsigned long parachuteTimeout = 0;
+bool isWriting = false;  // is the SD card being written to?
 
 // FUNCTION PROTOTYPES
 void setPinModes();
 void calcFilename();
+void logData(File* file);
 void error();  // flash status LED for error
 bool gotSignal();  // DTMF tone coming in?
 byte getPinValue(unsigned int pin);  // digitalRead() a pin, returning 1 or 0
@@ -69,6 +71,7 @@ void checkTimeout(
   const char* cutString);  // stop cutdown if timeout reached
 
 SoftwareSerial gpsSerial = SoftwareSerial(GPS_RX, GPS_TX);
+File file;
 
 void setup()
 {
@@ -76,6 +79,8 @@ void setup()
   Serial.begin(SERIAL_BAUD);
   
   setPinModes();
+  
+  gpsSerial.begin(GPS_BAUD);
   
   // light status LED
   digitalWrite(STATUS, HIGH);
@@ -86,12 +91,34 @@ void setup()
   
   void calcFilename();
   
+  Serial.println(filename);
+  
   // setup went well, turn light off
   digitalWrite(STATUS, LOW);
 }
 
 void loop()
 {
+  // log all NMEA sentences directly
+  while (gpsSerial.available())
+  {
+    if (!isWriting)
+    {
+      file = SD.open(filename, FILE_WRITE);
+      isWriting = true;
+    }
+    
+    // write sentences to the SD card
+    file.write(gpsSerial.read());
+  }
+  
+  if (isWriting)
+  {
+    logData(&file);
+    file.close();
+    isWriting = false;
+  }
+  
   // check if a DTMF tone is being received, then process it
   if (gotSignal())
   {
@@ -164,6 +191,19 @@ void calcFilename()
     if (!SD.exists(filename))
       break;  // the filename has been found!
   }
+}
+
+void logData(File* file)
+{
+  String message = "";
+  message += analogRead(BATTERY_VOLTAGE);
+  message += ",";
+  message += analogRead(TEMP_IN);
+  message += ",";
+  message += analogRead(TEMP_OUT);
+  message += ",";
+  message += analogRead(TEMP_IC);
+  file->println(message);
 }
 
 // flash LED continuously to show error
